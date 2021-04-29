@@ -54,6 +54,7 @@ class Hmac(object):
             signature = request.headers[self.header]
             if(self.signatureLeading != ''):
                 signature = signature.replace(self.signatureLeading,'')
+                
             return six.b(signature)
         except KeyError:
             raise SecretKeyIsNotSet()
@@ -106,9 +107,8 @@ class Hmac(object):
         return hmac.new(six.b(key), data, digestmod=self.digestmod)
 
     def make_hmac(self, data='', key=None):
-        hmac_token_server = self._hmac_factory(encode_string(data), key).digest()
-        if(self.encodeDigest):
-            hmac_token_server = base64.b64encode(hmac_token_server)
+        hmac_token_server = self._hmac_factory(encode_string(data), key).hexdigest()
+        
         return hmac_token_server
 
     def make_hmac_for(self, name, data=''):
@@ -153,7 +153,7 @@ class Hmac(object):
 
         if self.hmac_key is not None:
             token = self.make_hmac(request.data)
-            hmac_server_tokens.append(token)
+            hmac_server_tokens.append(six.b(token))
 
         if self.hmac_keys is not None:
             try:
