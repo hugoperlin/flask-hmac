@@ -41,15 +41,20 @@ def decode_string(value):
 
 class Hmac(object):
 
-    def __init__(self, app=None, header=None, digestmod=None):
+    def __init__(self, app=None, header=None, signatureLeading=None, digestmod=None, encodeDigest=False):
         self.header = header or 'Signature'
+        self.signatureLeading = signatureLeading or ''
+        self.encodeDigest = encodeDigest
         self.digestmod = digestmod or hashlib.sha256
         if app:
             self.init_app(app)
 
     def get_signature(self, request):
         try:
-            return six.b(request.headers[self.header])
+            signature = request.headers[self.header]
+            if(self.signatureLeading != ''):
+                signature = signature.replace(self.signatureLeading,'')
+            return six.b(signature)
         except KeyError:
             raise SecretKeyIsNotSet()
 
@@ -102,7 +107,8 @@ class Hmac(object):
 
     def make_hmac(self, data='', key=None):
         hmac_token_server = self._hmac_factory(encode_string(data), key).digest()
-        hmac_token_server = base64.b64encode(hmac_token_server)
+        if(self.encodeDigest):
+            hmac_token_server = base64.b64encode(hmac_token_server)
         return hmac_token_server
 
     def make_hmac_for(self, name, data=''):
@@ -116,7 +122,9 @@ class Hmac(object):
         except KeyError as ex:
             raise UnknownKeyName(ex)
         valuekey = '{0}:{1}'.format(name, decode_string(self.make_hmac(data, key)))
-        token = base64.b64encode(six.b(valuekey))
+        token = valuekey
+        if(self.encodeDigest):
+            token = base64.b64encode(six.b(valuekey))
         return token
 
     def _parse_multiple_signature(self, signature):
